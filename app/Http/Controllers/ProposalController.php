@@ -67,7 +67,7 @@ class ProposalController extends Controller
     try {
         Proposal::create($data);
     } catch (\Exception $e) {
-        // It's better to log the error and show a user-friendly message
+        //It's better to log the error and show a user-friendly message
         //Log::error('Proposal creation failed: ' . $e->getMessage());
         
         return back()
