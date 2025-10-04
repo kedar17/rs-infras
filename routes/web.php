@@ -45,6 +45,11 @@ Route::middleware(['auth'])->group(function () {
 	Route::post('add-project', [ProjectController::class, 'addProject'])->name('add-project');
 	Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
 	Route::delete('/projects/{id}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+	//Daily Project log
+	Route::post('add-work-log', [ProjectController::class, 'addDailyWorkLog'])->name('add-work-log');
+
+	Route::put('/work-log/{log}', [ProjectController::class, 'updateWorkLog'])->name('work_log.update');
+	Route::delete('/work-log/{id}', [ProjectController::class, 'destroyWorkLog'])->name('daily_work_logs.destroy');
 
 	Route::get('task-management', [TaskController::class, 'index'])->name('task-management');
 	Route::post('add-task', [TaskController::class, 'addTask'])->name('add-task');

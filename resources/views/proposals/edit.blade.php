@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
             border-radius: 4px 4px 0 0;
             padding: 5px;
         }
+
         .editor-toolbar button {
             background: none;
             border: none;
@@ -20,29 +22,34 @@
             cursor: pointer;
             border-radius: 3px;
         }
+
         .editor-toolbar button:hover {
             background-color: #e9ecef;
         }
+
         .rich-editor {
             min-height: 150px;
             border: 1px solid #ced4da;
             border-radius: 0 0 4px 4px;
             padding: 10px;
         }
+
         .section-title {
             border-bottom: 2px solid #0d6efd;
             padding-bottom: 8px;
             margin-top: 25px;
             margin-bottom: 15px;
         }
+
         .proposal-container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
             background-color: #fff;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
+
         .header-bar {
             background: linear-gradient(90deg, #0d6efd, #0dcaf0);
             color: white;
@@ -50,19 +57,23 @@
             border-radius: 8px;
             margin-bottom: 25px;
         }
+
         .btn-primary {
             background: linear-gradient(to right, #0d6efd, #0dcaf0);
             border: none;
         }
+
         .btn-primary:hover {
             background: linear-gradient(to right, #0b5ed7, #0ba9c5);
         }
+
         .error-message {
             font-size: 0.875rem;
             margin-top: 0.25rem;
         }
     </style>
 </head>
+
 <body class="bg-light">
     <div class="container my-5">
         <div class="proposal-container">
@@ -71,9 +82,9 @@
             </div>
 
             <form action="{{ route('proposals.update', $proposal) }}" method="POST">
-              @csrf
-              @method('PUT')
-                
+                @csrf
+                @method('PUT')
+
                 <!-- Date & Reference -->
                 <div class="row mb-4">
                     <div class="col-md-6">
@@ -102,7 +113,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Client Mobile</label>
-                        <input type="text" name="client_mobile" class="form-control" value="{{ old('client_mobile', $proposal->client_mobile) }}" maxlength="50" required>
+                        <input type="text" name="client_mobile" class="form-control" value="{{ old('client_mobile', $proposal->client_mobile) }}" maxlength="10" onkeyup="this.value=this.value.replace(/[^0-9]/g,'');" required>
                         @error('client_mobile')<p class="text-danger error-message">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -146,32 +157,32 @@
                 <table class="table table-bordered mb-3" id="items-table">
                     <thead class="table-light">
                         <tr>
-                            <th>Description</th>
-                            <th width="100">Quantity</th>
-                            <th width="150">Unit Price (₹)</th>
-                            <th width="50"></th>
+                            <th>Item</th>
+                            <th>Make</th>
+                            <th>Quantity</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @php
-                            // Fixed: Handle both old input and database items correctly
-                            $oldItems = old('items');
-                            if ($oldItems) {
-                                $items = $oldItems;
-                            } else {
-                                // Check if items is stored as JSON in the database
-                                $dbItems = $proposal->items;
-                                if (is_string($dbItems)) {
-                                    $items = json_decode($dbItems, true) ?: [['description' => '', 'qty' => '', 'unit_price' => '']];
-                                } else {
-                                    $items = $dbItems ?: [['description' => '', 'qty' => '', 'unit_price' => '']];
-                                }
-                            }
-                            
-                            // Ensure we have at least one item
-                            if (count($items) === 0) {
-                                $items = [['description' => '', 'qty' => '', 'unit_price' => '']];
-                            }
+                        // Fixed: Handle both old input and database items correctly
+                        $oldItems = old('items');
+                        if ($oldItems) {
+                        $items = $oldItems;
+                        } else {
+                        // Check if items is stored as JSON in the database
+                        $dbItems = $proposal->items;
+                        if (is_string($dbItems)) {
+                        $items = json_decode($dbItems, true) ?: [['description' => '', 'qty' => '', 'make' => '']];
+                        } else {
+                        $items = $dbItems ?: [['description' => '', 'qty' => '', 'make' => '']];
+                        }
+                        }
+
+                        // Ensure we have at least one item
+                        if (count($items) === 0) {
+                        $items = [['description' => '', 'qty' => '', 'make' => '']];
+                        }
                         @endphp
                         @foreach($items as $i => $item)
                         <tr>
@@ -180,13 +191,14 @@
                                 @error("items.$i.description")<p class="text-danger error-message">{{ $message }}</p>@enderror
                             </td>
                             <td>
-                                <input type="number" name="items[{{ $i }}][qty]" value="{{ $item['qty'] ?? '' }}" class="form-control form-control-sm" min="1" required>
-                                @error("items.$i.qty")<p class="text-danger error-message">{{ $message }}</p>@enderror
+                                <input type="text" name="items[{{ $i }}][make]" value="{{ $item['make'] ?? '' }}" class="form-control form-control-sm" required>
+                                @error("items.$i.make")<p class="text-danger error-message">{{ $message }}</p>@enderror
                             </td>
                             <td>
-                                <input type="number" step="0.01" name="items[{{ $i }}][unit_price]" value="{{ $item['unit_price'] ?? '' }}" class="form-control form-control-sm" min="0" required>
-                                @error("items.$i.unit_price")<p class="text-danger error-message">{{ $message }}</p>@enderror
+                                <input type="text" name="items[{{ $i }}][qty]" value="{{ $item['qty'] ?? '' }}" class="form-control form-control-sm" required>
+                                @error("items.$i.qty")<p class="text-danger error-message">{{ $message }}</p>@enderror
                             </td>
+
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-danger remove-row">×</button>
                             </td>
@@ -330,7 +342,7 @@
             // Initialize rich text editor functionality
             function initEditor(editorEl, textareaEl) {
                 const toolbar = editorEl.previousElementSibling;
-                
+
                 // Add event listeners to toolbar buttons
                 toolbar.querySelectorAll('button').forEach(button => {
                     button.addEventListener('click', function() {
@@ -340,51 +352,52 @@
                         updateTextarea(editorEl, textareaEl);
                     });
                 });
-                
+
                 // Update textarea on editor input
                 editorEl.addEventListener('input', function() {
                     updateTextarea(editorEl, textareaEl);
                 });
-                
+
                 // Initialize content
                 updateTextarea(editorEl, textareaEl);
             }
-            
+
             function updateTextarea(editorEl, textareaEl) {
                 textareaEl.value = editorEl.innerHTML;
             }
-            
+
             // Initialize all editors
             initEditor(document.getElementById('body-intro-editor'), document.getElementById('body-intro-textarea'));
             initEditor(document.getElementById('scope-editor'), document.getElementById('scope-textarea'));
             initEditor(document.getElementById('warranty-editor'), document.getElementById('warranty-textarea'));
             initEditor(document.getElementById('payment-editor'), document.getElementById('payment-textarea'));
             initEditor(document.getElementById('notes-editor'), document.getElementById('notes-textarea'));
-            
+
             // Add line item functionality
             document.getElementById('add-item').addEventListener('click', function() {
                 const table = document.querySelector('#items-table tbody');
                 const rowCount = table.children.length;
                 const newRow = document.createElement('tr');
-                
+
                 newRow.innerHTML = `
                     <td>
                         <input type="text" name="items[${rowCount}][description]" class="form-control form-control-sm" required>
                     </td>
                     <td>
-                        <input type="number" name="items[${rowCount}][qty]" class="form-control form-control-sm" min="1" value="1" required>
+                        <input type="text"  name="items[${rowCount}][make]" class="form-control form-control-sm"  required>
                     </td>
                     <td>
-                        <input type="number" step="0.01" name="items[${rowCount}][unit_price]" class="form-control form-control-sm" min="0" required>
+                        <input type="text" name="items[${rowCount}][qty]" class="form-control form-control-sm"  required>
                     </td>
+                    
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-danger remove-row">×</button>
                     </td>
                 `;
-                
+
                 table.appendChild(newRow);
             });
-            
+
             // Remove row functionality
             document.addEventListener('click', function(e) {
                 if (e.target.matches('.remove-row')) {
@@ -394,7 +407,7 @@
                     }
                 }
             });
-            
+
             // Update all textareas before form submission
             document.querySelector('form').addEventListener('submit', function() {
                 updateTextarea(document.getElementById('body-intro-editor'), document.getElementById('body-intro-textarea'));
@@ -406,4 +419,5 @@
         });
     </script>
 </body>
+
 </html>

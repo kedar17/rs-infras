@@ -197,24 +197,29 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label>Estimated Cost (₹)</label>
-                            <input type="text" class="form-control" name="est_cost" value="{{ old('est_cost', $expense->est_cost ?? '') }}" placeholder="e.g., 5000" >
+                        <div class="col-md-4">
+                            <label>Amount(₹)</label>
+                            <input type="text" class="form-control" name="amount" value="{{ old('amount', $expense->amount ?? '') }}" placeholder="e.g., 5000" >
                         </div>
                         
-                       <div class="col-md-6">
-                            <label>Status</label>
-                            <select class="form-select" name="status">
-                                <option value="draft"> Draft</option>
-                                <option value="submitted"> Submitted</option>
-                                <option value="approved">Approved</option>
-                                <option value="over-expense">Overexpense</option>
+                      
+                        
+                        <div class="col-md-4">
+                            <label>Mode of Payment</label>
+                            <select class="form-select" name="payment_mode">
+                                
+                                <option value="cash" {{ $expense->payment_mode == 'cash' ? 'selected' : '' }} > Cash</option>
+                                <option value="upi" {{ $expense->payment_mode == 'upi' ? 'selected' : '' }} > UPI</option>
+                                <option value="bank__transfer" {{ $expense->payment_mode == 'bank__transfer' ? 'selected' : '' }} >Bank Transfer</option>
+                                <option value="cheque" {{ $expense->payment_mode == 'cheque' ? 'selected' : '' }} >Cheque</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label>Date</label>
-                            <input type="date" class="form-control" name="date" value="{{ old('date', $expense->date ?? '') }}">
+                        <div class="col-md-4">
+                            <label>Reference No.</label>
+                            <input type="text" class="form-control" name="payment_ref" value="{{ old('payment_ref', $expense->payment_ref ?? '') }}">
                         </div>
+
+                        
                         
                         <div class="col-md-12">
                             <label class="form-label">Remarks</label>
