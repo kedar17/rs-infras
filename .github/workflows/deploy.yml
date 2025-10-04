@@ -97,9 +97,9 @@ jobs:
       - name: Remove deleted files on remote (if any)
         if: steps.changes.outputs.deleted != ''
         env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
+          FTP_HOST: ${{ secrets.CPANEL_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          FTP_PASS: ${{ secrets.CPANEL_FTP_PASS }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           set -euo pipefail
