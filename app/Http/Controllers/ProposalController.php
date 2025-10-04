@@ -45,8 +45,8 @@ class ProposalController extends Controller
         'body_intro'         => 'required|string',
         'items'              => 'required|array|min:1',
         'items.*.description'=> 'required|string',
-        'items.*.qty'        => 'required|integer|min:1',
-        'items.*.unit_price' => 'required|numeric|min:0',
+        'items.*.qty'        => 'required',
+        'items.*.make' => 'required',
         'price_total'        => 'required|numeric|min:0',
         'price_gst_percent'  => 'required|integer|min:0|max:100',
         'price_in_words'     => 'required|string|max:255',
@@ -92,8 +92,8 @@ class ProposalController extends Controller
         'body_intro'         => 'required|string',
         'items'              => 'required|array|min:1',
         'items.*.description'=> 'required|string',
-        'items.*.qty'        => 'required|integer|min:1',
-        'items.*.unit_price' => 'required|numeric|min:0',
+        'items.*.qty'        => 'required',
+        'items.*.make' => 'required',
         'price_total'        => 'required|numeric|min:0',
         'price_gst_percent'  => 'required|integer|min:0|max:100',
         'price_in_words'     => 'required|string|max:255',
@@ -120,13 +120,22 @@ class ProposalController extends Controller
     public function download(Proposal $proposal)
     {
         $pdf = PDF::loadView('proposals.pdf', compact('proposal'))
-                ->setPaper('a4', 'portrait');
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'isPhpEnabled' => true,
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'defaultFont' => 'DejaVu Sans',
+                    'enable_html5_parser' => true,
+                    'enable_remote' => true,
+                    'enable_php' => true
+                ]);
         return $pdf->download("proposal-{$proposal->client_name}.pdf");
     }
      public function destroy($id)
     {
         $task = Proposal::findOrFail($id);
         $task->delete();
-        return redirect()->route('task-management')->with('success', 'Task deleted.');
+        return redirect()->route('proposals')->with('success', 'Task deleted.');
     }
 }

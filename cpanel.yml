@@ -1,0 +1,28 @@
+deployment:
+  tasks:
+    - echo "🚀 Starting Laravel deployment..."
+
+    # Define deployment path
+    - export DEPLOYPATH=/home/pxhsv91r1o2q/public_html/demo.orchidsw.com/rs-infras/cons-app/
+
+    # Copy Laravel files to public_html (excluding vendor and storage)
+    - /bin/rsync -av --exclude='vendor' --exclude='storage' --exclude='.env' --exclude='.git' . $DEPLOYPATH
+
+    # Navigate to deployment path
+    - cd $DEPLOYPATH
+
+    # Install Composer dependencies
+    - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
+
+    # Set correct permissions
+    - /bin/chmod -R 755 $DEPLOYPATH
+    - /bin/chmod -R 775 $DEPLOYPATH/storage
+    - /bin/chmod -R 775 $DEPLOYPATH/bootstrap/cache
+
+    # Run Laravel optimizations
+    - /usr/local/bin/php artisan config:cache
+    - /usr/local/bin/php artisan route:cache
+    - /usr/local/bin/php artisan view:cache
+
+    # Done
+    - echo "✅ Laravel deployment complete!"

@@ -65,7 +65,7 @@
                 <li>
                     <a class="dropdown-item d-flex align-items-center" href="#">
                         <div class="me-3">
-                            <img class="rounded-circle" src="img/undraw_profile_1.svg" alt="" width="40">
+                            <img class="rounded-circle" src="img/logosocial.jpg" alt="" width="40">
                             <div class="status-indicator bg-success"></div>
                         </div>
                         <div class="fw-bold">
@@ -86,7 +86,7 @@
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
                 role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <span class="me-2 d-none d-lg-inline text-gray-600 small">{{ optional(auth()->user())->name ?? 'Guest' }}</span>
-                <img class="img-profile rounded-circle" src="/img/undraw_profile.svg" width="32" height="32">
+                <img class="img-profile rounded-circle" src="/img/logosocial.jpg" width="32" height="32">
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
                 <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user fa-sm fa-fw me-2 text-gray-400"></i> Profile</a></li>

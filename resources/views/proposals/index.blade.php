@@ -32,11 +32,11 @@
                                 </tr>
                             </thead>
                             <tbody id="clientTableBody">
-                                @foreach ($proposals as $proposal)
+                                @foreach ($proposals as $rowIndex => $proposal)
                                 <tr>
-                                    <td>{{$proposal->id}}</td>
+                                    <td>{{ ++$rowIndex }}</td>
                                     <td>{{ $proposal->reference }}</td>
-                                    <td>{{ $proposal->date }}</td>
+                                    <td>{{ $proposal->updated_at }}</td>
                                     <td>{{ $proposal->client_name }}</td>
                                     <td>{{ $proposal->client_mobile }}</td>
                                     <td>
@@ -44,11 +44,11 @@
                                     </td>
                                     
                                     <td>
-                                        <a href="{{ route('proposals.show', $proposal->id) }}"
+                                        <a href="{{ route('proposals.show', $proposal->id) }}" target="_blank"
                                           class="btn btn-sm btn-info">View</a>
                                         <a href="{{ route('proposals.download', $proposal->id) }}"
                                           class="btn btn-sm btn-success">PDF</a>
-                                        <a href="{{ route('proposals.edit', $proposal->id) }}"
+                                        <a href="{{ route('proposals.edit', $proposal->id) }}" target="_blank"
                                           class="btn btn-sm btn-warning">Edit</a>
                                        
                                         <button class="btn btn-sm btn-danger" type="button"

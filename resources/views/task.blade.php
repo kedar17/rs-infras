@@ -67,7 +67,7 @@
                             
                             
                             <td>
-                                <a href="projects-details.php" class="btn btn-sm btn-secondary">View</a>
+                                <!-- <a href="projects-details.php" class="btn btn-sm btn-secondary">View</a> -->
                                 <button class="btn btn-sm btn-warning" type="button"
                                         data-bs-toggle="modal"
                                         data-bs-target="#editTaskModal-{{ $task->id }}">

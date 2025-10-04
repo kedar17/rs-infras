@@ -100,7 +100,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Client Mobile</label>
-                        <input type="text" name="client_mobile" class="form-control" value="{{ old('client_mobile') }}" maxlength="50" required>
+                        <input type="tel" name="client_mobile" class="form-control" value="{{ old('client_mobile') }}" maxlength="10" onkeyup="this.value=this.value.replace(/[^0-9]/g,'');" required>
                         @error('client_mobile')<p class="text-danger error-message">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -144,10 +144,10 @@
                 <table class="table table-bordered mb-3" id="items-table">
                     <thead class="table-light">
                         <tr>
-                            <th>Description</th>
-                            <th width="100">Quantity</th>
-                            <th width="150">Unit Price (₹)</th>
-                            <th width="50"></th>
+                            <th>Item</th>
+                            <th>Make</th>
+                            <th>Quantity</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -164,13 +164,14 @@
                                 @error("items.$i.description")<p class="text-danger error-message">{{ $message }}</p>@enderror
                             </td>
                             <td>
-                                <input type="number" name="items[{{ $i }}][qty]" value="{{ $item['qty'] ?? '' }}" class="form-control form-control-sm" min="1" required>
-                                @error("items.$i.qty")<p class="text-danger error-message">{{ $message }}</p>@enderror
-                            </td>
-                            <td>
-                                <input type="number" step="0.01" name="items[{{ $i }}][unit_price]" value="{{ $item['unit_price'] ?? '' }}" class="form-control form-control-sm" min="0" required>
+                                <input type="text"  name="items[{{ $i }}][make]" value="{{ $item['make'] ?? '' }}" class="form-control form-control-sm"  required>
                                 @error("items.$i.unit_price")<p class="text-danger error-message">{{ $message }}</p>@enderror
                             </td>
+                            <td>
+                                <input type="text" name="items[{{ $i }}][qty]" value="{{ $item['qty'] ?? '' }}" class="form-control form-control-sm"  required>
+                                @error("items.$i.qty")<p class="text-danger error-message">{{ $message }}</p>@enderror
+                            </td>
+                            
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-danger remove-row">×</button>
                             </td>
@@ -356,10 +357,10 @@
                         <input type="text" name="items[${rowCount}][description]" class="form-control form-control-sm" required>
                     </td>
                     <td>
-                        <input type="number" name="items[${rowCount}][qty]" class="form-control form-control-sm" min="1" value="1" required>
+                        <input type="text" name="items[${rowCount}][qty]" class="form-control form-control-sm" min="1" value="1" required>
                     </td>
                     <td>
-                        <input type="number" step="0.01" name="items[${rowCount}][unit_price]" class="form-control form-control-sm" min="0" required>
+                        <input type="text" step="0.01" name="items[${rowCount}][make]" class="form-control form-control-sm" min="0" required>
                     </td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-danger remove-row">×</button>
