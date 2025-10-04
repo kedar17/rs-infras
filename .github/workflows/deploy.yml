@@ -1,27 +1,41 @@
-name: Deploy via SFTP
+name: Deploy via plain FTP
 
 on:
   push:
-    branches: [ admin ]
+    branches:
+      - admin
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
-      - name: Sync to server via SFTP
+      - name: Prepare sync exclude list
+        run: |
+          cat > .ftp-exclude <<'EOF'
+          .git
+          .github
+          node_modules
+          vendor
+          .env
+          tests
+          EOF
+
+      - name: Sync to server via FTP
         env:
           FTP_HOST: ${{ secrets.CPANEL_HOST }}
           FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
           FTP_PASS: ${{ secrets.CPANEL_FTP_PASS }}
           REMOTE_DIR: /public_html/demo.orchidsw.com/rs-infras/cons-app
         run: |
-          lftp -u "$FTP_USER","$FTP_PASS" sftp://$FTP_HOST -e "
-            mirror -R --delete --exclude .git --exclude node_modules ./ $REMOTE_DIR;
+          # Use passive mode and mirror from repo root to remote dir
+          lftp -u "$FTP_USER","$FTP_PASS" ftp://$FTP_HOST -e "
+            set ftp:passive-mode on;
+            mirror -R --delete --exclude-glob-from .ftp-exclude --verbose ./ $REMOTE_DIR;
             bye
           "
