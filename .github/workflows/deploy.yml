@@ -17,14 +17,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure repo files are readable
+        run: |
+          # make files readable and directories traversable for the runner user
+          sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
+          sudo chmod -R u+rwX "$GITHUB_WORKSPACE" || true
+          # show problematic files (if any)
+          find "$GITHUB_WORKSPACE" ! -readable -print || true
+
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
       - name: Compute changed files
         id: changes
         run: |
-          echo "before=${{ github.event.before }}" >&2
-          echo "after=${{ github.sha }}" >&2
           # changed files (A M R) and deleted files (D)
           MODIFIED=$(git diff --name-only --diff-filter=AMR ${{ github.event.before }} ${{ github.sha }} || true)
           DELETED=$(git diff --name-only --diff-filter=D ${{ github.event.before }} ${{ github.sha }} || true)
@@ -38,24 +44,19 @@ jobs:
       - name: Upload only modified/added files via FTP
         if: steps.changes.outputs.modified != ''
         env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
+          FTP_HOST: ${{ secrets.CPANEL_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          FTP_PASS: ${{ secrets.CPANEL_FTP_PASS }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           set -euo pipefail
 
-          # Exclude patterns (adjust as needed)
           EXCLUDE_REGEX='^(\.git|\.github|node_modules/|vendor/|\.env|tests/)'
-
-          echo "Preparing upload of modified/added files..."
           cd "$GITHUB_WORKSPACE"
 
-          # Prepare lftp batch file
           BATCH=$(mktemp)
           echo "set ftp:passive-mode on" >> "$BATCH"
 
-          # Read modified list from step output
           MODIFIED_CONTENT=${{ steps.changes.outputs.modified }}
           IFS=$'\n' read -r -d '' -a MODIFIED_FILES <<< "$MODIFIED_CONTENT"$'\0'
 
@@ -64,7 +65,7 @@ jobs:
             if [ -z "$f" ]; then
               continue
             fi
-            # Skip excluded patterns and directories
+            # Normalize path and skip excluded patterns
             if [[ "$f" =~ $EXCLUDE_REGEX ]]; then
               echo "Skipping excluded: $f"
               continue
@@ -73,10 +74,13 @@ jobs:
               echo "Skipping directory: $f"
               continue
             fi
+            # skip unreadable files (prevents permission denied)
+            if [ ! -r "$f" ]; then
+              echo "Skipping unreadable file: $f"
+              continue
+            fi
 
             remote_dir="${REMOTE_DIR%/}/$(dirname "$f")"
-            # lftp mkdir -p via 'mkdir -p' is not available, use 'mkdir -p' emulation: try to create each level
-            # We'll create the full remote_dir with 'mkdir -p' style using eval in lftp by creating path segments
             echo "mkdir -p $remote_dir" >> "$BATCH"
             echo "put -O $remote_dir $f" >> "$BATCH"
             UPLOAD_COUNT=$((UPLOAD_COUNT+1))
@@ -89,7 +93,6 @@ jobs:
             exit 0
           fi
 
-          # Run lftp batch
           lftp -u "$FTP_USER","$FTP_PASS" ftp://"$FTP_HOST" -f "$BATCH"
           rm -f "$BATCH"
           echo "Uploaded $UPLOAD_COUNT files."
@@ -97,9 +100,9 @@ jobs:
       - name: Remove deleted files on remote (if any)
         if: steps.changes.outputs.deleted != ''
         env:
-          FTP_HOST: ${{ secrets.CPANEL_HOST }}
-          FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
-          FTP_PASS: ${{ secrets.CPANEL_FTP_PASS }}
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           set -euo pipefail
@@ -116,15 +119,12 @@ jobs:
             if [ -z "$f" ]; then
               continue
             fi
-            # Skip excluded patterns
             if [[ "$f" =~ ^(\.git|\.github|node_modules/|vendor/|\.env|tests/) ]]; then
               echo "Skipping excluded deletion: $f"
               continue
             fi
-
             remote_path="${REMOTE_DIR%/}/$f"
             echo "rm -f $remote_path" >> "$BATCH_DEL"
-            # Also attempt to remove parent directory if empty (safe to ignore failures)
             parent_dir="$(dirname "$remote_path")"
             echo "rmdir $parent_dir || true" >> "$BATCH_DEL"
             DEL_COUNT=$((DEL_COUNT+1))
