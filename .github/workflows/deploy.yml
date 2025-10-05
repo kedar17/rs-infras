@@ -3,7 +3,7 @@ name: Laravel CI/CD (GoDaddy Subdomain)
 on:
   push:
     branches:
-      - admin  # Change if your deployment branch is different
+      - admin
 
 jobs:
   build-and-deploy:
@@ -13,36 +13,26 @@ jobs:
     - name: ⬇️ Checkout code
       uses: actions/checkout@v4
 
-    - name: ⚙️ Set up PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        extensions: mbstring, bcmath, curl, xml, gd
-        tools: composer
 
-    - name: 📦 Install Composer dependencies
-      run: composer install --no-dev --optimize-autoloader
-
-   
-    - name: 🚫 Remove unnecessary files
+    - name: 🚫 Prepare release folder (exclude large/unwanted files)
       run: |
-        rm -rf node_modules
-        rm -rf tests
-        rm -rf .git
-        rm -rf .github
+        rm -rf release || true
+        mkdir -p release
+        rsync -av --exclude='.git' --exclude='vendor' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='storage/logs' ./ release/
 
-    - name: 🚀 Deploy via SFTP to GoDaddy
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-      with:
-        server: ${{ secrets.CPANEL_HOST }}
-        username: ${{ secrets.CPANEL_FTP_USER }}
-        password: ${{ secrets.CPANEL_FTP_PASS }}
-        server-dir: ${{ secrets.REMOTE_DIR }}
-        local-dir: ./
-        exclude: |
-          .env
-          .git*
-          node_modules/
-          tests/
-          storage/logs/
-          .github/
+    - name: 📡 Install lftp and deploy (incremental)
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y lftp
+        # Choose protocol: sftp or ftp. Use sftp:// if your host supports SFTP.
+        # For plain FTP use ftp://${{ secrets.CPANEL_HOST }} or just ${COPANEL_HOST} in the open command.
+        lftp -u "${{ secrets.CPANEL_FTP_USER }}","${{ secrets.CPANEL_FTP_PASS }}" \
+          -e "set ssl:verify-certificate no; \
+               set ftp:ssl-allow no; \
+               set net:max-retries 3; \
+               set net:reconnect-interval-base 5; \
+               mirror -R --only-newer --parallel=3 --verbose release ${{ secrets.REMOTE_DIR }}; \
+               bye" sftp://${{ secrets.CPANEL_HOST }}
+      env:
+        LC_ALL: C.UTF-8
+        LANG: C.UTF-8
