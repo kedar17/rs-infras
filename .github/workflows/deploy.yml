@@ -9,7 +9,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      # adjust if you need a different local source path
       LOCAL_SRC: ./
 
     steps:
@@ -52,34 +51,33 @@ jobs:
         sudo apt-get install -y lftp
 
     - name: Deploy directly from repo root with lftp (incremental, correct excludes)
-  run: |
-    if [ -z "${{ secrets.SFTP_PROTOCOL }}" ] || [ "${{ secrets.SFTP_PROTOCOL }}" = "sftp" ]; then
-      PROTO="sftp"
-    else
-      PROTO="${{ secrets.SFTP_PROTOCOL }}"
-    fi
+      run: |
+        if [ -z "${{ secrets.SFTP_PROTOCOL }}" ] || [ "${{ secrets.SFTP_PROTOCOL }}" = "sftp" ]; then
+          PROTO="sftp"
+        else
+          PROTO="${{ secrets.SFTP_PROTOCOL }}"
+        fi
 
-    if [ -z "${{ secrets.SSH_PORT }}" ]; then
-      TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}"
-    else
-      TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}:${{ secrets.SSH_PORT }}"
-    fi
+        if [ -z "${{ secrets.SSH_PORT }}" ]; then
+          TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}"
+        else
+          TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}:${{ secrets.SSH_PORT }}"
+        fi
 
-    # run lftp, cd to remote dir and mirror from local '.' so path matching is consistent
-    lftp -u "${{ secrets.CPANEL_FTP_USER }}","${{ secrets.CPANEL_FTP_PASS }}" \
-      -e "set ssl:verify-certificate no; \
-          set sftp:connect-program 'ssh -a -x -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes'; \
-          lcd .; \
-          cd ${{ secrets.REMOTE_DIR }}; \
-          mirror -R --only-newer --parallel=3 --verbose \
-            --exclude .git/ \
-            --exclude .github/ \
-            --exclude node_modules/ \
-            --exclude tests/ \
-            --exclude .env \
-            --exclude 'storage/logs/*' \
-            . .; \
-          bye" "$TARGET_HOST"
-  env:
-    LC_ALL: C.UTF-8
-    LANG: C.UTF-8
+        lftp -u "${{ secrets.CPANEL_FTP_USER }}","${{ secrets.CPANEL_FTP_PASS }}" \
+          -e "set ssl:verify-certificate no; \
+              set sftp:connect-program 'ssh -a -x -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes'; \
+              lcd ${LOCAL_SRC}; \
+              cd ${{ secrets.REMOTE_DIR }}; \
+              mirror -R --only-newer --parallel=3 --verbose \
+                --exclude .git/ \
+                --exclude .github/ \
+                --exclude node_modules/ \
+                --exclude tests/ \
+                --exclude .env \
+                --exclude 'storage/logs/*' \
+                . .; \
+              bye" "$TARGET_HOST"
+      env:
+        LC_ALL: C.UTF-8
+        LANG: C.UTF-8
