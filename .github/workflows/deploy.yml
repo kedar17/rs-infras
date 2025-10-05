@@ -15,23 +15,41 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Optional: enable PHP + composer on runner if you want to build vendor or run tests here
-    # Uncomment these steps if you need composer install / asset build in CI
-    #- name: Set up PHP
-    #  uses: shivammathur/setup-php@v2
-    #  with:
-    #    php-version: '8.2'
-    #    extensions: mbstring, bcmath, curl, xml, gd
-    #    tools: composer
+    # Optional PHP / Composer build steps (uncomment if you want vendor built on runner)
+    # - name: Set up PHP
+    #   uses: shivammathur/setup-php@v2
+    #   with:
+    #     php-version: '8.2'
+    #     extensions: mbstring, bcmath, curl, xml, gd
+    #     tools: composer
     #
-    #- name: Install Composer dependencies
-    #  run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+    # - name: Install Composer dependencies
+    #   run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
-    - name: Prepare release folder
+    - name: Prepare release folder (robust rsync)
       run: |
-        rm -rf $RELEASE_DIR || true
-        mkdir -p $RELEASE_DIR
-        rsync -av --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='storage/logs' ./ $RELEASE_DIR/
+        rm -rf "$RELEASE_DIR" || true
+        mkdir -p "$RELEASE_DIR"
+        rsync -av --delete \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='node_modules' \
+          --exclude='tests' \
+          --exclude='.env' \
+          --exclude='storage/logs' \
+          --exclude='**/tmp/**' \
+          --exclude='**/.cache/**' \
+          --delay-updates \
+          --partial-dir=.rsync-partial \
+          --prune-empty-dirs \
+          ./ "$RELEASE_DIR"/ || rc=$?; \
+        if [ -n "${rc:-}" ]; then \
+          if [ "$rc" -eq 24 ]; then \
+            echo "rsync returned 24 (vanished files). Treating as non-fatal and continuing."; \
+          else \
+            echo "rsync failed with code $rc"; exit $rc; \
+          fi \
+        fi
 
     - name: Add remote host key to known_hosts
       run: |
@@ -54,22 +72,18 @@ jobs:
 
     - name: Deploy with lftp incremental upload
       run: |
-        # choose protocol: default to sftp, allow override via SFTP_PROTOCOL secret (ftp | ftps | sftp)
         if [ -z "${{ secrets.SFTP_PROTOCOL }}" ] || [ "${{ secrets.SFTP_PROTOCOL }}" = "sftp" ]; then
           PROTO="sftp"
         else
           PROTO="${{ secrets.SFTP_PROTOCOL }}"
         fi
 
-        # build TARGET_HOST; include port only when SSH_PORT is set
         if [ -z "${{ secrets.SSH_PORT }}" ]; then
           TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}"
         else
           TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}:${{ secrets.SSH_PORT }}"
         fi
 
-        # run lftp mirror upload: --only-newer uploads changed/new files and preserves relative paths
-        # tune --parallel and add --delete if you want remote deletions to mirror local
         lftp -u "${{ secrets.CPANEL_FTP_USER }}","${{ secrets.CPANEL_FTP_PASS }}" \
           -e "set ssl:verify-certificate no; \
               set sftp:connect-program 'ssh -a -x -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes'; \
