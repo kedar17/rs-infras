@@ -14,6 +14,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Restore file mtimes from Git history
+      uses: dawidd6/action-git-restore-mtime@v2
+      with:
+        fetch-depth: 0
 
     # Optional PHP / Composer build steps (uncomment if you want vendor built on runner)
     # - name: Set up PHP
