@@ -15,11 +15,20 @@ jobs:
 
 
     - name: 🚫 Prepare release folder (exclude large/unwanted files)
-      run: |
-        rm -rf release || true
-        mkdir -p release
-        rsync -av --exclude='.git' --exclude='vendor' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='storage/logs' ./ release/
-
+		run: |
+			rm -rf release || true
+			mkdir -p release
+			rsync -av --exclude='.git' --exclude='vendor' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='storage/logs' ./ release/
+    - name: Add host key to known_hosts
+		run: |
+			mkdir -p ~/.ssh
+			chmod 700 ~/.ssh
+			# use port if non-standard, e.g., -p 2222
+			ssh-keyscan -H -p 22 "${{ secrets.CPANEL_HOST }}" >> ~/.ssh/known_hosts
+			chmod 644 ~/.ssh/known_hosts
+  env:
+    LC_ALL: C.UTF-8
+    LANG: C.UTF-8
     - name: 📡 Install lftp and deploy (incremental)
       run: |
         sudo apt-get update -y
