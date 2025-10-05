@@ -5,43 +5,80 @@ on:
     branches:
       - admin
 
+env:
+  RELEASE_DIR: release
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: ⬇️ Checkout code
+    - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, bcmath, curl, xml, gd
+        tools: composer
 
-    - name: 🚫 Prepare release folder (exclude large/unwanted files)
-		run: |
-			rm -rf release || true
-			mkdir -p release
-			rsync -av --exclude='.git' --exclude='vendor' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='storage/logs' ./ release/
-    - name: Add host key to known_hosts
-		run: |
-			mkdir -p ~/.ssh
-			chmod 700 ~/.ssh
-			# use port if non-standard, e.g., -p 2222
-			ssh-keyscan -H -p 22 "${{ secrets.CPANEL_HOST }}" >> ~/.ssh/known_hosts
-			chmod 644 ~/.ssh/known_hosts
-  env:
-    LC_ALL: C.UTF-8
-    LANG: C.UTF-8
-    - name: 📡 Install lftp and deploy (incremental)
+    - name: Install Composer dependencies
+      run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+    - name: Build frontend assets optional
+      run: |
+        npm ci
+        npm run prod
+      continue-on-error: true
+
+    - name: Prepare release folder
+      run: |
+        rm -rf $RELEASE_DIR || true
+        mkdir -p $RELEASE_DIR
+        rsync -av --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='tests' --exclude='.env' --exclude='storage/logs' ./ $RELEASE_DIR/
+
+    - name: Add remote host key to known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        # If you use a non-standard SSH port set SSH_PORT secret and include -p $SSH_PORT
+        if [ -z "${{ secrets.SSH_PORT }}" ]; then
+          ssh-keyscan -H "${{ secrets.CPANEL_HOST }}" >> ~/.ssh/known_hosts
+        else
+          ssh-keyscan -H -p "${{ secrets.SSH_PORT }}" "${{ secrets.CPANEL_HOST }}" >> ~/.ssh/known_hosts
+        fi
+        chmod 644 ~/.ssh/known_hosts
+      env:
+        LC_ALL: C.UTF-8
+        LANG: C.UTF-8
+
+    - name: Install lftp
       run: |
         sudo apt-get update -y
         sudo apt-get install -y lftp
-        # Choose protocol: sftp or ftp. Use sftp:// if your host supports SFTP.
-        # For plain FTP use ftp://${{ secrets.CPANEL_HOST }} or just ${COPANEL_HOST} in the open command.
+
+    - name: Deploy with lftp incremental upload
+      run: |
+        # choose protocol: use sftp if host supports SFTP, otherwise change to ftp://
+        if [ -z "${{ secrets.SFTP_PROTOCOL }}" ] || [ "${{ secrets.SFTP_PROTOCOL }}" = "sftp" ]; then
+          PROTO="sftp"
+        else
+          PROTO="${{ secrets.SFTP_PROTOCOL }}"
+        fi
+
+        # build the remote target string with optional port for lftp open if using sftp protocol
+        if [ -z "${{ secrets.SSH_PORT }}" ]; then
+          TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}"
+        else
+          TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}:${{ secrets.SSH_PORT }}"
+        fi
+
+        # lftp mirror upload: only-newer keeps relative paths and uploads only changed files
+        # tune --parallel and remove --delete unless you want remote deletions to mirror local
         lftp -u "${{ secrets.CPANEL_FTP_USER }}","${{ secrets.CPANEL_FTP_PASS }}" \
           -e "set ssl:verify-certificate no; \
-               set ftp:ssl-allow no; \
-               set net:max-retries 3; \
-               set net:reconnect-interval-base 5; \
-               mirror -R --only-newer --parallel=3 --verbose release ${{ secrets.REMOTE_DIR }}; \
-               bye" sftp://${{ secrets.CPANEL_HOST }}
+              set sftp:connect-program 'ssh -a -x -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes'; \
+              mirror -R --only-newer --parallel=3 --verbose ${RELEASE_DIR} ${{ secrets.REMOTE_DIR }}; bye" "$TARGET_HOST"
       env:
         LC_ALL: C.UTF-8
         LANG: C.UTF-8
