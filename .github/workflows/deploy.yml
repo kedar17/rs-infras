@@ -23,12 +23,7 @@ jobs:
     - name: 📦 Install Composer dependencies
       run: composer install --no-dev --optimize-autoloader
 
-    - name: 🧱 Build frontend assets (optional)
-      run: |
-        npm ci
-        npm run prod
-      continue-on-error: true  # Skip if no frontend build
-
+   
     - name: 🚫 Remove unnecessary files
       run: |
         rm -rf node_modules
