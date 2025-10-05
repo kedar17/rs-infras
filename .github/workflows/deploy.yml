@@ -37,7 +37,7 @@ jobs:
         rm -rf .github
 
     - name: 🚀 Deploy via SFTP to GoDaddy
-      uses: SamKirkland/FTP-Deploy-Action@v4
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.6
       with:
         server: ${{ secrets.CPANEL_HOST }}
         username: ${{ secrets.CPANEL_FTP_USER }}
