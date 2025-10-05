@@ -5,12 +5,13 @@ on:
     branches:
       - admin
 
-env:
-  RELEASE_DIR: release
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      # adjust if you need a different local source path
+      LOCAL_SRC: ./
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -19,10 +20,8 @@ jobs:
 
     - name: Restore file mtimes from Git history
       uses: chetan/git-restore-mtime-action@v2
-      with:
-        fetch-depth: 0
 
-    # Optional PHP / Composer build steps (uncomment if you want vendor built on runner)
+    # Optional PHP / Composer build steps (uncomment if needed)
     # - name: Set up PHP
     #   uses: shivammathur/setup-php@v2
     #   with:
@@ -32,31 +31,6 @@ jobs:
     #
     # - name: Install Composer dependencies
     #   run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
-
-    - name: Prepare release folder (robust rsync)
-      run: |
-        rm -rf "$RELEASE_DIR" || true
-        mkdir -p "$RELEASE_DIR"
-        rsync -av --delete \
-          --exclude='.git' \
-          --exclude='.github' \
-          --exclude='node_modules' \
-          --exclude='tests' \
-          --exclude='.env' \
-          --exclude='storage/logs' \
-          --exclude='**/tmp/**' \
-          --exclude='**/.cache/**' \
-          --delay-updates \
-          --partial-dir=.rsync-partial \
-          --prune-empty-dirs \
-          ./ "$RELEASE_DIR"/ || rc=$?; \
-        if [ -n "${rc:-}" ]; then \
-          if [ "$rc" -eq 24 ]; then \
-            echo "rsync returned 24 (vanished files). Treating as non-fatal and continuing."; \
-          else \
-            echo "rsync failed with code $rc"; exit $rc; \
-          fi \
-        fi
 
     - name: Add remote host key to known_hosts
       run: |
@@ -77,8 +51,9 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y lftp
 
-    - name: Deploy with lftp incremental upload
+    - name: Deploy directly from repo root with lftp (incremental)
       run: |
+        # choose protocol: default to sftp, allow override via SFTP_PROTOCOL secret (ftp | ftps | sftp)
         if [ -z "${{ secrets.SFTP_PROTOCOL }}" ] || [ "${{ secrets.SFTP_PROTOCOL }}" = "sftp" ]; then
           PROTO="sftp"
         else
@@ -91,10 +66,18 @@ jobs:
           TARGET_HOST="${PROTO}://${{ secrets.CPANEL_HOST }}:${{ secrets.SSH_PORT }}"
         fi
 
+        # lftp mirror from local repo root (preserves relative paths). Adjust exclude-glob patterns as needed.
         lftp -u "${{ secrets.CPANEL_FTP_USER }}","${{ secrets.CPANEL_FTP_PASS }}" \
           -e "set ssl:verify-certificate no; \
               set sftp:connect-program 'ssh -a -x -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes'; \
-              mirror -R --only-newer --parallel=3 --verbose ${RELEASE_DIR} ${{ secrets.REMOTE_DIR }}; bye" "$TARGET_HOST"
+              mirror -R --only-newer --parallel=3 --verbose \
+                --exclude-glob .git \
+                --exclude-glob .github \
+                --exclude-glob node_modules \
+                --exclude-glob tests \
+                --exclude-glob .env \
+                --exclude-glob 'storage/logs/*' \
+                ./ ${{ secrets.REMOTE_DIR }}; bye" "$TARGET_HOST"
       env:
         LC_ALL: C.UTF-8
         LANG: C.UTF-8
